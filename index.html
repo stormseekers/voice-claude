@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Claude</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap');
+:root{--bg:#0a0a0a;--surface:#111;--border:#1e1e1e;--text:#e8e8e8;--muted:#555;--accent:#c8f542;--accent2:#42f5a7;--recording:#ff6b35;--wake:#a78bfa}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 20% 80%,rgba(200,245,66,.04),transparent 70%),radial-gradient(ellipse 50% 50% at 80% 20%,rgba(167,139,250,.04),transparent 70%);pointer-events:none;z-index:0}
+header{position:relative;z-index:10;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.logo{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);cursor:pointer;user-select:none}
+.sp{font-size:10px;letter-spacing:.1em;padding:4px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted);transition:all .3s;white-space:nowrap}
+.sp.waiting{border-color:var(--wake);color:var(--wake);animation:sp 3s infinite}
+.sp.wake{border-color:var(--wake);color:var(--wake);background:rgba(167,139,250,.08)}
+.sp.listening{border-color:var(--recording);color:var(--recording);animation:pb 1s infinite}
+.sp.thinking{border-color:var(--accent2);color:var(--accent2)}
+.sp.speaking{border-color:var(--accent);color:var(--accent)}
+@keyframes pb{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes sp{0%,100%{opacity:.6}50%{opacity:1}}
+#setup{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+.sc{width:100%;max-width:400px;border:1px solid var(--border);border-radius:16px;padding:32px;background:var(--surface)}
+.sc h2{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px;color:var(--accent)}
+.sc p{font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.7}
+.sc input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none;margin-bottom:12px;transition:border-color .2s}
+.sc input:focus{border-color:var(--accent)}
+.sh{font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+.bp{width:100%;background:var(--accent);color:#000;border:none;border-radius:8px;padding:13px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.bp:hover{opacity:.85}
+main{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;overflow:hidden}
+#ow{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px 12px;gap:16px;flex-shrink:0}
+#orb{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#2a2a2a,#0f0f0f);border:1px solid var(--border);position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .4s,box-shadow .4s;-webkit-tap-highlight-color:transparent}
+#orb.waiting{border-color:rgba(167,139,250,.3);box-shadow:0 0 30px rgba(167,139,250,.08)}
+#orb.wake{border-color:var(--wake);box-shadow:0 0 50px rgba(167,139,250,.3);animation:op .4s ease}
+#orb.listening{border-color:var(--recording);box-shadow:0 0 50px rgba(255,107,53,.3);animation:ob 2s ease-in-out infinite}
+#orb.thinking{border-color:var(--accent2);box-shadow:0 0 40px rgba(66,245,167,.2);animation:os 1.5s ease-in-out infinite alternate}
+#orb.speaking{border-color:var(--accent);box-shadow:0 0 50px rgba(200,245,66,.25);animation:og .8s ease-in-out infinite alternate}
+@keyframes op{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
+@keyframes ob{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes og{from{transform:scale(1)}to{transform:scale(1.04)}}
+@keyframes os{from{box-shadow:0 0 40px rgba(66,245,167,.2),12px 0 30px rgba(66,245,167,.1)}to{box-shadow:0 0 40px rgba(66,245,167,.2),-12px 0 30px rgba(66,245,167,.1)}}
+#ob{display:flex;align-items:center;gap:4px;height:40px;opacity:0;transition:opacity .3s}
+#orb.listening #ob,#orb.speaking #ob{opacity:1}
+#ob .b{width:4px;border-radius:2px;background:var(--recording);height:6px;animation:bw .7s ease-in-out infinite}
+#orb.speaking #ob .b{background:var(--accent)}
+#ob .b:nth-child(1){animation-delay:0s}#ob .b:nth-child(2){animation-delay:.1s}#ob .b:nth-child(3){animation-delay:.2s}#ob .b:nth-child(4){animation-delay:.15s}#ob .b:nth-child(5){animation-delay:.05s}#ob .b:nth-child(6){animation-delay:.25s}#ob .b:nth-child(7){animation-delay:.08s}
+@keyframes bw{0%,100%{height:4px}50%{height:28px}}
+#oi{position:absolute;color:var(--muted);opacity:1;transition:opacity .3s}
+#orb.listening #oi,#orb.speaking #oi{opacity:0}
+#orb.waiting #oi{color:rgba(167,139,250,.5)}#orb.wake #oi{color:var(--wake)}
+#sl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:center;min-height:16px}
+#int{font-size:14px;color:var(--muted);text-align:center;padding:0 24px;min-height:20px;font-style:italic}
+#int.active{color:var(--text)}
+#wh{font-size:10px;color:var(--muted);letter-spacing:.08em;opacity:.6}
+#tr{flex:1;overflow-y:auto;padding:14px 18px 6px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
+#tr::-webkit-scrollbar{width:3px}#tr::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.msg{max-width:85%;animation:fu .3s ease}.msg.user{align-self:flex-end}.msg.claude{align-self:flex-start}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ml{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;padding:0 4px}
+.msg.user .ml{text-align:right;color:var(--accent)}.msg.claude .ml{color:var(--accent2)}
+.mb{padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.65}
+.msg.user .mb{background:rgba(200,245,66,.07);border:1px solid rgba(200,245,66,.12);border-radius:12px 4px 12px 12px}
+.msg.claude .mb{background:var(--surface);border:1px solid var(--border);border-radius:4px 12px 12px 12px}
+.dots span{display:inline-block;width:4px;height:4px;background:var(--muted);border-radius:50%;margin:0 2px;animation:db 1.2s infinite}
+.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+@keyframes db{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-5px);opacity:1}}
+#bot{padding:10px 18px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.iw{flex:1;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:28px;padding:8px 14px;transition:border-color .2s}
+.iw:focus-within{border-color:rgba(200,245,66,.3)}
+#ti{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;resize:none;max-height:80px}
+#ti::placeholder{color:var(--muted)}
+#sb{width:28px;height:28px;border-radius:50%;border:none;background:var(--accent);color:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s}
+#sb:hover{opacity:.8}#sb:disabled{opacity:.25;cursor:default}
+.tt{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;flex-shrink:0}
+.ts{width:30px;height:17px;border-radius:9px;background:var(--border);position:relative;transition:background .2s}
+.ts.on{background:var(--accent2)}.ts::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform .2s}
+.ts.on::after{transform:translateX(13px)}
+@media(max-width:480px){header{padding:12px 16px}#orb{width:100px;height:100px}#ow{padding:18px 16px 10px}#tr{padding:10px 14px 6px}#bot{padding:8px 14px 18px}.msg{max-width:92%}}
+</style>
+</head>
+<body>
+<div id="setup"><div class="sc">
+  <h2>Voice Claude</h2>
+  <p>Fully hands-free. Say <strong style="color:var(--wake)">"Hey Claude"</strong> to activate, then talk naturally.</p>
+  <input type="password" id="aki" placeholder="sk-ant-api03-..." autocomplete="off"/>
+  <div class="sh">Saved locally. Never shared.</div>
+  <button class="bp" onclick="saveKey()">Start Listening</button>
+</div></div>
+<header>
+  <div class="logo" ondblclick="clearConvo()">Voice Claude</div>
+  <div class="sp" id="spl">initializing</div>
+</header>
+<main>
+  <div id="ow">
+    <div id="orb" class="idle" onclick="manualActivate()">
+      <div id="oi"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0014 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></div>
+      <div id="ob"><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div></div>
+    </div>
+    <div id="sl">tap orb or say "hey claude"</div>
+    <div id="int"></div>
+    <div id="wh">always listening for wake word</div>
+  </div>
+  <div id="tr"></div>
+</main>
+<div id="bot">
+  <div class="iw"><textarea id="ti" rows="1" placeholder="or type here..." onkeydown="hk(event)" oninput="ar(this)"></textarea>
+  <button id="sb" onclick="sendText()" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></button></div>
+  <div class="tt" onclick="toggleTTS()"><div class="ts on" id="tsw"></div><span id="tsl" style="font-size:14px">X</span></div>
+</div>
+<script>
+const WP=['hey claude','hey cloud','a cloud','hey claud','ok claude','okay claude'];
+const SIL=1800,MAX=15000;
+let key=localStorage.getItem('vc_key')||'',hist=[],tts=true,utt=null;
+let wr=null,lr=null,state='idle',st=null,lt=null,acc='';
+document.getElementById('tsl').textContent=String.fromCodePoint(128266);
+if(key){document.getElementById('setup').style.display='none';init();}
+function saveKey(){const k=document.getElementById('aki').value.trim();if(!k.startsWith('sk-')){alert('Need valid Anthropic key');return;}localStorage.setItem('vc_key',k);key=k;document.getElementById('setup').style.display='none';init();}
+function init(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){ss('ready','type only');document.getElementById('wh').textContent='Use Chrome for voice';return;}startWake();}
+function setState(s){state=s;document.getElementById('orb').className=s;const sl=document.getElementById('sl'),wh=document.getElementById('wh');const m={waiting:['listening for hey claude','waiting','waiting for wake word'],wake:['wake word!','wake',''],listening:['listening...','listening',''],thinking:['thinking...','thinking',''],speaking:['speaking...','speaking',''],idle:['tap orb or say hey claude','ready','always listening for wake word']};const[l,p,h]=m[s]||['','ready',''];sl.textContent=l;ss(p,p);wh.textContent=h;wh.style.opacity=h?'.6':'0';}
+function startWake(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;wr=new SR();wr.continuous=true;wr.interimResults=true;wr.lang='en-US';wr.maxAlternatives=3;wr.onresult=(e)=>{if(state!=='waiting')return;for(let i=e.resultIndex;i<e.results.length;i++)for(let j=0;j<e.results[i].length;j++){const t=e.results[i][j].transcript.toLowerCase().trim();if(WP.some(w=>t.includes(w))){wake();return;}}};wr.onerror=(e)=>{if(e.error==='not-allowed'){ss('ready','mic denied');return;}setTimeout(()=>{if(state==='waiting')startWake();},1000);};wr.onend=()=>{if(state==='waiting')setTimeout(startWake,300);};wr.start();setState('waiting');}
+function stopWake(){if(wr){try{wr.stop();}catch(e){}wr=null;}}
+function wake(){stopWake();setState('wake');tone(440,80);setTimeout(()=>tone(660,120),100);if(utt)speechSynthesis.cancel();setTimeout(startListen,400);}
+function manualActivate(){if(state==='thinking'||state==='speaking')return;if(state==='listening'){finalize();return;}stopWake();wake();}
+function startListen(){acc='';si('');setState('listening');const SR=window.SpeechRecognition||window.webkitSpeechRecognition;lr=new SR();lr.continuous=true;lr.interimResults=true;lr.lang='en-US';lr.onresult=(e)=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal){acc+=e.results[i][0].transcript+' ';rst();}else interim+=e.results[i][0].transcript;}si((acc+interim).trim());};lr.onerror=(e)=>{if(e.error==='no-speech'){if(acc.trim())finalize();else{cleanup();startWake();}}};lr.onend=()=>{if(state==='listening'){if(acc.trim())finalize();else{cleanup();startWake();}}};lr.start();rst();lt=setTimeout(()=>{if(state==='listening')finalize();},MAX);}
+function rst(){clearTimeout(st);if(acc.trim())st=setTimeout(()=>{if(state==='listening')finalize();},SIL);}
+function finalize(){clearTimeout(st);clearTimeout(lt);const t=acc.trim();cleanup();if(t){si('');send(t);}else startWake();}
+function cleanup(){clearTimeout(st);clearTimeout(lt);if(lr){try{lr.stop();}catch(e){}lr=null;}acc='';}
+function si(t){const el=document.getElementById('int');el.textContent=t;el.className=t?'active':'';}
+async function send(text){setState('thinking');addMsg('user',text);hist.push({role:'user',content:text});const te=addMsg('claude','<div class="dots"><span></span><span></span><span></span></div>',true);try{const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,system:'You are Claude, a voice assistant. Keep responses conversational and concise - read aloud via TTS. Avoid markdown. Speak naturally.',messages:hist})});const d=await r.json();if(d.error)throw new Error(d.error.message);const rep=d.content[0].text;hist.push({role:'assistant',content:rep});te.querySelector('.mb').innerHTML=fmt(rep);te.querySelector('.mb').classList.remove('thinking');if(tts)speak(rep,()=>{setState('waiting');startWake();});else{setState('waiting');startWake();}}catch(err){te.querySelector('.mb').textContent='Error: '+err.message;setState('waiting');startWake();}}
+function speak(text,cb){if(!('speechSynthesis'in window)){if(cb)cb();return;}speechSynthesis.cancel();setState('speaking');const c=text.replace(/**|__|*|#+ /g,'').replace(/
++/g,'. ').trim();const u=new SpeechSynthesisUtterance(c);u.rate=1.05;const vs=speechSynthesis.getVoices();const pv=vs.find(v=>v.name.includes('Samantha')||v.name.includes('Google US English')||v.name.includes('Aria'));if(pv)u.voice=pv;u.onend=()=>{if(cb)cb();};u.onerror=()=>{if(cb)cb();};utt=u;speechSynthesis.speak(u);}
+speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();
+function toggleTTS(){tts=!tts;document.getElementById('tsw').className='ts'+(tts?' on':'');document.getElementById('tsl').textContent=tts?String.fromCodePoint(128266):String.fromCodePoint(128263);if(!tts)speechSynthesis.cancel();}
+function tone(f,d){try{const c=new(window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=f;o.type='sine';g.gain.setValueAtTime(.08,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d/1000);o.start();o.stop(c.currentTime+d/1000);}catch(e){}}
+document.getElementById('ti').addEventListener('input',function(){document.getElementById('sb').disabled=!this.value.trim();});
+function hk(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText();}}
+function ar(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,80)+'px';}
+function sendText(){const inp=document.getElementById('ti');const t=inp.value.trim();if(!t)return;inp.value='';inp.style.height='auto';document.getElementById('sb').disabled=true;stopWake();cleanup();send(t);}
+function ss(type,text){const el=document.getElementById('spl');el.className='sp '+type;el.textContent=text;}
+function fmt(t){return t.replace(/**(.*?)**/g,'<strong>$1</strong>').replace(/
+/g,'<br>');}
+function addMsg(role,content,isT=false){const tr=document.getElementById('tr');const w=document.createElement('div');w.className='msg '+(role==='user'?'user':'claude');const l=document.createElement('div');l.className='ml';l.textContent=role==='user'?'you':'claude';const b=document.createElement('div');b.className='mb'+(isT?' thinking':'');b.innerHTML=content;w.appendChild(l);w.appendChild(b);tr.appendChild(w);tr.scrollTop=tr.scrollHeight;return w;}
+function clearConvo(){if(!confirm('Clear?'))return;hist=[];document.getElementById('tr').innerHTML='';}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)speechSynthesis.pause();else speechSynthesis.resume();});
+</script>
+</body>
+</html>
