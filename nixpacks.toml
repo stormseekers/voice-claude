@@ -5,4 +5,4 @@ nixPkgs = ["caddy"]
 cmds = []
 
 [start]
-cmd = "caddy file-server --root /app --listen :80"
+cmd = "caddy file-server --root /app --listen :$PORT"
