@@ -16,6 +16,8 @@ header{z-index:10;padding:16px 20px;display:flex;align-items:center;justify-cont
 #pill.listening{border-color:var(--rec);color:var(--rec)}
 #pill.thinking{border-color:var(--acc2);color:var(--acc2)}
 #pill.speaking{border-color:var(--acc);color:var(--acc)}
+#reset-btn{background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--mut);font-size:10px;padding:4px 10px;cursor:pointer;font-family:'DM Mono',monospace;letter-spacing:.05em;transition:all .2s}
+#reset-btn:hover{border-color:var(--rec);color:var(--rec)}
 #setup{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
 .card{width:100%;max-width:400px;border:1px solid var(--bdr);border-radius:16px;padding:32px;background:var(--sur)}
 .card h2{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px;color:var(--acc)}
@@ -24,6 +26,7 @@ header{z-index:10;padding:16px 20px;display:flex;align-items:center;justify-cont
 .card input:focus{border-color:var(--acc)}
 .hint{font-size:11px;color:var(--mut);margin-bottom:16px}
 #connect-btn{width:100%;background:var(--acc);color:#000;border:none;border-radius:8px;padding:13px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+#connect-btn:hover{opacity:.85}
 main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1}
 #orb-wrap{display:flex;flex-direction:column;align-items:center;padding:28px 20px 12px;gap:14px;flex-shrink:0}
 #orb{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#2a2a2a,#0f0f0f);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .4s,box-shadow .4s;position:relative;-webkit-tap-highlight-color:transparent}
@@ -35,18 +38,24 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative
 @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
 @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 @keyframes breathe2{from{transform:scale(1)}to{transform:scale(1.04)}}
+@keyframes spin{from{box-shadow:0 0 40px rgba(66,245,167,.2),12px 0 30px rgba(66,245,167,.1)}to{box-shadow:0 0 40px rgba(66,245,167,.2),-12px 0 30px rgba(66,245,167,.1)}}
 #bars{display:flex;align-items:center;gap:4px;height:40px;opacity:0;transition:opacity .3s}
 #orb.listening #bars,#orb.speaking #bars{opacity:1}
 #bars .b{width:4px;border-radius:2px;background:var(--rec);height:6px;animation:bw .7s ease-in-out infinite}
 #orb.speaking #bars .b{background:var(--acc)}
+#bars .b:nth-child(1){animation-delay:0s}#bars .b:nth-child(2){animation-delay:.1s}#bars .b:nth-child(3){animation-delay:.2s}#bars .b:nth-child(4){animation-delay:.15s}#bars .b:nth-child(5){animation-delay:.05s}
 @keyframes bw{0%,100%{height:4px}50%{height:28px}}
 #orb-icon{position:absolute;color:var(--mut);transition:opacity .3s}
 #orb.listening #orb-icon,#orb.speaking #orb-icon{opacity:0}
+#orb.waiting #orb-icon{color:rgba(167,139,250,.5)}
+#orb.wake #orb-icon{color:var(--wak)}
 #state-lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);text-align:center}
 #interim{font-size:14px;color:var(--mut);text-align:center;padding:0 20px;min-height:20px;font-style:italic}
 #interim.on{color:var(--txt)}
 #wake-hint{font-size:10px;color:var(--mut);opacity:.6;letter-spacing:.08em}
 #msgs{flex:1;overflow-y:auto;padding:12px 16px 6px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
+#msgs::-webkit-scrollbar{width:3px}
+#msgs::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px}
 .msg{max-width:86%;animation:up .3s ease}.msg.u{align-self:flex-end}.msg.c{align-self:flex-start}
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .mlbl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:4px;padding:0 4px}
@@ -68,6 +77,7 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative
 .tsw.on{background:var(--acc2)}
 .tsw::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform .2s}
 .tsw.on::after{transform:translateX(13px)}
+@media(max-width:480px){#orb{width:100px;height:100px}#orb-wrap{padding:18px 16px 10px}.msg{max-width:92%}}
 </style>
 </head>
 <body>
@@ -75,10 +85,16 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative
 <h2>Voice Claude</h2>
 <p>Say <strong style="color:var(--wak)">Hey Claude</strong> to activate, then speak. Fully hands-free.</p>
 <input type="password" id="key-input" placeholder="sk-ant-api03-..." autocomplete="off" />
-<div class="hint">Saved locally on this device only.</div>
+<div class="hint">Your Anthropic API key. Saved locally on this device only.</div>
 <button id="connect-btn">Start Listening</button>
 </div></div>
-<header><div class="logo" id="logo">Voice Claude</div><div id="pill">idle</div></header>
+<header>
+<div class="logo" id="logo">Voice Claude</div>
+<div style="display:flex;align-items:center;gap:10px">
+<button id="reset-btn">&#9881; reset key</button>
+<div id="pill">idle</div>
+</div>
+</header>
 <main><div id="orb-wrap">
 <div id="orb" class="idle"><div id="orb-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0014 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></div><div id="bars"><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div><div class="b"></div></div></div>
 <div id="state-lbl">tap orb or say hey claude</div>
@@ -91,12 +107,23 @@ var WAKE=["hey claude","hey cloud","hey claud","ok claude"];
 var SIL=1800,MAX=15000;
 var key=localStorage.getItem("vc_key")||"",hist=[],tts=true,utt=null;
 var wr=null,lr=null,appState="idle",st=null,lt=null,acc="";
+function showSetup(){
+  stopWake();cleanup();
+  if(window.speechSynthesis)speechSynthesis.cancel();
+  document.getElementById("key-input").value="";
+  document.getElementById("setup").style.display="flex";
+}
 document.getElementById("connect-btn").addEventListener("click",function(){
   var k=document.getElementById("key-input").value.trim();
   if(!k||!k.startsWith("sk-")){alert("Enter a valid Anthropic API key starting with sk-");return;}
   localStorage.setItem("vc_key",k);key=k;
   document.getElementById("setup").style.display="none";
+  hist=[];document.getElementById("msgs").innerHTML="";
   init();
+});
+document.getElementById("reset-btn").addEventListener("click",function(){
+  localStorage.removeItem("vc_key");key="";
+  showSetup();
 });
 document.getElementById("key-input").addEventListener("keydown",function(e){if(e.key==="Enter")document.getElementById("connect-btn").click();});
 document.getElementById("tg-btn").addEventListener("click",function(){
@@ -109,7 +136,7 @@ document.getElementById("ti").addEventListener("input",function(){document.getEl
 document.getElementById("ti").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendText();}});
 document.getElementById("sb").addEventListener("click",sendText);
 document.getElementById("orb").addEventListener("click",manualActivate);
-document.getElementById("logo").addEventListener("dblclick",function(){if(confirm("Clear?")){hist=[];document.getElementById("msgs").innerHTML="";}});
+document.getElementById("logo").addEventListener("dblclick",function(){if(confirm("Clear conversation?")){hist=[];document.getElementById("msgs").innerHTML="";}});
 document.addEventListener("visibilitychange",function(){if(!window.speechSynthesis)return;if(document.hidden)speechSynthesis.pause();else speechSynthesis.resume();});
 if(key){document.getElementById("setup").style.display="none";init();}
 function init(){var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setP("ready","type only - use Chrome for voice");return;}startWake();}
@@ -121,7 +148,7 @@ function setOrb(s){appState=s;document.getElementById("orb").className=s;
 }
 function startWake(){var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   wr=new SR();wr.continuous=true;wr.interimResults=true;wr.lang="en-US";wr.maxAlternatives=3;
-  wr.onresult=function(e){if(appState!=="waiting")return;for(var i=e.resultIndex;i<e.results.length;i++)for(var j=0;j<e.results[i].length;j++){var t=e.results[i][j].transcript.toLowerCase().trim();if(WAKE.some(function(w){return t.indexOf(w)>=0;})){onWake();return;}}};  
+  wr.onresult=function(e){if(appState!=="waiting")return;for(var i=e.resultIndex;i<e.results.length;i++)for(var j=0;j<e.results[i].length;j++){var t=e.results[i][j].transcript.toLowerCase().trim();if(WAKE.some(function(w){return t.indexOf(w)>=0;})){onWake();return;}}};
   wr.onerror=function(e){if(e.error==="not-allowed"){setP("ready","mic denied");return;}setTimeout(function(){if(appState==="waiting")startWake();},1000);};
   wr.onend=function(){if(appState==="waiting")setTimeout(startWake,300);};
   wr.start();setOrb("waiting");
@@ -143,10 +170,25 @@ function setInt(t){var el=document.getElementById("interim");el.textContent=t;el
 function sendText(){var inp=document.getElementById("ti"),t=inp.value.trim();if(!t)return;inp.value="";document.getElementById("sb").disabled=true;stopWake();cleanup();sendMsg(t);}
 function sendMsg(text){setOrb("thinking");addMsg("u",text);hist.push({role:"user",content:text});
   var te=addMsg("c","<div class=\"dots\"><span></span><span></span><span></span></div>",true);
-  fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1024,system:"You are Claude, a voice assistant. Keep responses conversational and concise - spoken aloud via TTS. Avoid markdown.",messages:hist})})
+  fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1024,
+      system:"You are Claude, a voice assistant. Keep responses conversational and concise - spoken aloud via TTS. Avoid markdown.",
+      messages:hist})})
   .then(function(r){return r.json();})
-  .then(function(d){if(d.error)throw new Error(d.error.message);var rep=d.content[0].text;hist.push({role:"assistant",content:rep});te.querySelector(".mbub").innerHTML=rep.replace(/\n/g,"<br>");if(tts)speak(rep,function(){setOrb("waiting");startWake();});else{setOrb("waiting");startWake();}})
-  .catch(function(err){te.querySelector(".mbub").textContent="Error: "+err.message;setOrb("waiting");startWake();});
+  .then(function(d){
+    if(d.error)throw new Error(d.error.message);
+    var rep=d.content[0].text;
+    hist.push({role:"assistant",content:rep});
+    te.querySelector(".mbub").innerHTML=rep.replace(/\n/g,"<br>");
+    if(tts)speak(rep,function(){setOrb("waiting");startWake();});
+    else{setOrb("waiting");startWake();}
+  })
+  .catch(function(err){
+    var msg=err.message;
+    te.querySelector(".mbub").innerHTML=msg+' <span style="color:var(--wak);cursor:pointer;text-decoration:underline" onclick="document.getElementById(\'reset-btn\').click()">reset key</span>';
+    setOrb("waiting");startWake();
+  });
 }
 function speak(text,cb){if(!window.speechSynthesis){if(cb)cb();return;}speechSynthesis.cancel();setOrb("speaking");
   var c=text.replace(/[*_`#]/g,"").replace(/\n+/g,". ").trim();
